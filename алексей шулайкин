@@ -1,0 +1,167 @@
+from models import room
+from time import sleep
+from random import randrange
+from keyboard import add_hotkey
+
+arrObjects = []
+
+def stopProgramm():
+    global stopMarker
+    stopMarker = 0
+    print("Прекращение выполнения программы по команде пользователя")
+
+def controlMode():
+    global stopMarker
+    global pauseMarker
+    stopMarker = 1
+    print("Чтобы остановить режим отслеживания, нажмите \"ESC\"")
+    print("Чтобы добавить помещение для отслеживание, нажмите \"A\"")
+    print("Чтобы отредактировать параметры помещения для отслеживания, нажмите \"E\"")
+    print("Чтобы удалить помещение для отслеживание, нажмите \"D\"")
+    pauseMarker = "Off"
+    while stopMarker == 1:
+        if pauseMarker == "D":
+            deleteRoom()
+        if pauseMarker == "A":
+            addRoom()
+        if pauseMarker == "E":
+            editRoom()
+        for item in arrObjects:
+            printString = ""
+            item.tempValue = randrange(-100.0,200.0)
+            item.humidityValue = randrange(0.0,100.0)
+            print("\n") 
+            printString = "Помещение: *" + item.name + "*" + "\n"
+            if item.tempValue > item.tempMax or item.tempValue < item.tempMin:
+                if item.tempValue > item.tempMax:
+                    printString += "Температура в помещении выше предупредительного верхнего уровня (" + str(item.tempMax) + " °C). "
+                else:
+                    printString += "Температура в помещении ниже предупредительного нижнего уровня (" + str(item.tempMin) +" °C). "
+                print(printString, "Значение датчика температуры:" , item.tempValue, "°C")
+                printString = ""
+            if item.humidityValue > item.humidityMax or item.humidityValue < item.humidityMin:
+                if item.humidityValue > item.humidityMax:
+                    printString += "Влажность в помещении выше предупредительного верхнего уровня (" + str(item.humidityMax) + " %). "
+                else:
+                    printString += "Влажность в помещении ниже предупредительного нижнего уровня (" + str(item.humidityMin) + " %). "
+                print(printString, "Значение датчика влажности:" , item.humidityValue, "%")
+        sleep(10)
+
+def inputCheck(min,max,minRange):
+    while True:
+        try:
+            n = float(input())           
+        except ValueError:
+            print("Вы ввели не число. Попробуйте снова:")    
+        else:
+            if n < minRange:
+                print("Введённое число меньше минимально допустимого для данного помещения (%d)" %(minRange)," Попробуйте снова: ")
+            else:
+                if min <= n < max:
+                    return n
+                print("Введённое число вне диапазона: (%d, %d)" % (min, max)," Попробуйте снова: ")
+
+def addRoom():
+    name = input("Введите название помещения для дальнейшего отслеживания: ")
+    print("Введите минимально допустимое значение для температуры в помещении (%d - %d):" % (room.tempRangeMin,room.tempRangeMax))
+    tempMin = inputCheck(room.tempRangeMin,room.tempRangeMax,room.tempRangeMin - 1)
+    print("Введите максимально допустимое значение для температуры в помещении (%d - %d):" % (room.tempRangeMin,room.tempRangeMax))
+    tempMax = inputCheck(room.tempRangeMin,room.tempRangeMax,tempMin)
+    print("Введите минимально допустимое значение для влажности в помещении (0 - 100%): ")
+    humidityMin = inputCheck(0.0, 100.0, -1)
+    print("Введите максимально допустимое значение для влажности в помещении (0 - 100%): ")
+    humidityMax = inputCheck(0.0, 100.0, humidityMin)
+    roomTest = room(name,tempMin,tempMax,humidityMin,humidityMax)
+    arrObjects.append(roomTest)
+    print("Хотите добавить ещё помещение?[y/n]")
+    if input() == "y":
+        addRoom()
+    else:
+        global pauseMarker
+        pauseMarker = "Off"
+        controlMode()
+
+def deleteRoom():
+    global pauseMarker
+    if len(arrObjects) < 1:
+        print("Нет помещений для удаления")
+        pauseMarker = "Off"
+        controlMode()
+    else:
+        name = input("Введите имя помещения для удаления: ")
+        i = 0
+        for item in arrObjects:
+            if item.name == name:
+                del arrObjects[i]
+                print("Удалено успешно, возврат в режим отслеживание")
+                pauseMarker = "Off"
+            i += 1
+        if pauseMarker == "Off":
+            controlMode()
+        else:
+            print("Нет помещений с заданным именем, хотите попробовать снова?[y/n]")
+            if input() == "y":
+                deleteRoom()
+            else:
+                pauseMarker = "Off"
+                controlMode()
+    
+def editRoom():
+    global pauseMarker
+    if len(arrObjects) < 1:
+        print("Нет помещений для редактирования параметров")
+        pauseMarker = "Off"
+        controlMode()
+    else:
+        name = input("Введите имя помещения для редактирования параметров: ")
+        i = 0
+        for item in arrObjects:
+            if item.name == name:
+                print("Выберите параметр для редактирования: \n")
+                print("1 - Название помещения;")
+                print("2 - Минимально допустимое значение для температуры в помещении;")
+                print("3 - Максимально допустимое значение для температуры в помещении;")
+                print("4 - Минимально допустимое значение для влажности в помещении;")
+                print("5 - Максимально допустимое значение для влажности в помещении.")
+                numParam = inputCheck(1,6,-100000000)
+                print("Введите новое значение")
+                if (numParam == 1):
+                    item.name = input()
+                if (numParam == 2):
+                    item.tempMin = inputCheck(room.tempRangeMin,room.tempRangeMax,room.tempRangeMin - 1)
+                if (numParam == 3):
+                    item.tempMax = inputCheck(room.tempRangeMin,room.tempRangeMax,item.tempMin)
+                if (numParam == 4):
+                    item.humidityMin = inputCheck(0.0, 100.0, -1)
+                if (numParam == 5):
+                    item.humidityMax = inputCheck(0.0, 100.0, item.humidityMin)
+                pauseMarker = "Off"
+            i += 1
+        if pauseMarker == "Off":
+            controlMode()
+        else:
+            print("Нет помещений с заданным именем, хотите попробовать снова?[y/n]")
+            if input() == "y":
+                editRoom()
+            else:
+                pauseMarker = "Off"
+                controlMode()
+
+def deleteMode():
+    global pauseMarker
+    pauseMarker = "D"
+
+def addMode():
+    global pauseMarker
+    pauseMarker = "A"
+
+def editMode():
+    global pauseMarker
+    pauseMarker = "E"
+    
+add_hotkey("ESC",stopProgramm)
+add_hotkey("A",addMode)
+add_hotkey("D",deleteMode)
+add_hotkey("E",editMode)
+
+addRoom()
